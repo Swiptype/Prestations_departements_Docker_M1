@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+
+<head>
+
+    <meta charset="utf-8">
+
+    <!-- Load d3.js -->
+    <script src="js/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="css/colorbrewer.css">
+    <link rel="stylesheet" href="css/style.css">
+    
+    <title>Carte de France</title>
+
+</head>
+
+<body>
+
+    <nav id="nav">
+        <ul id="ul">
+          <li id="li"><a href="index.html">Index</a></li>        
+          <li id="li"><a href="bar.html">Bar Chart (Données Pays)</a></li>
+          <li id="li"><a href="prestation.html">Liste des Prestations</a></li>
+          <li id="li"><a href="prestation_bar.html">Graphique des Prestations</a></li>
+        </ul>
+    </nav>
+
+    <!-- Create a div where the map will take place -->
+    <div id="map"></div>
+    
+    <div>
+        <button id="clear-button">Effacer</button>
+    </div>
+
+    <!-- Div for prestations details -->
+    <div id="prestations"></div>
+
+    <!-- Div for the bar chart -->
+    <div id="chart"></div>
+
+    <script>
+        let prestations = [];
+        let lastSelectedDepartment = null;
+
+        const width = 700, height = 550;
+
+        // Path and projection setup for France map
+        const path = d3.geoPath();
+        const projection = d3.geoConicConformal()
+            .center([2.454071, 46.279229])
+            .scale(2600)
+            .translate([width / 2 - 50, height / 2]);
+
+        path.projection(projection);
+
+        // Set up SVG canvas for map
+        const svg = d3.select('#map').append("svg")
+            .attr("id", "svg")
+            .attr("width", width)
+            .attr("height", height)
+            .attr("class", "Blues");
+
+        const departments = svg.append("g");
+
+        // Promises to load data
+        const promises = [];
+        promises.push(d3.json('data/departments.json'));
+        promises.push(d3.json("http://127.0.0.1:4000/?query={departments{departement count}}"));
+
+        Promise.all(promises).then(function (values) {
+            const geojson = values[0];
+            const dpts = values[1].data.departments;
+
+            // Draw map
+            departments
+                .selectAll("path")
+                .data(geojson.features)
+                .enter()
+                .append("path")
+                .attr('id', d => "d" + d.properties.CODE_DEPT)
+                .attr("d", path)
+                .on("click", function (event, d) {
+                    const departmentId = d.properties.CODE_DEPT;
+                    const departmentName = d.properties.NOM_DEPT;
+
+                    if (lastSelectedDepartment !== departmentId) {
+                        lastSelectedDepartment = departmentId;
+                        updatePrestationAndChart(departmentId, departmentName);
+                        highlightSelectedDepartment(departmentId);
+                    }
+                });
+
+            // Legend
+            const quantile = d3.scaleQuantile()
+                .domain([0, d3.max(dpts, e => +e.count)])
+                .range(d3.range(9));
+
+            const legend = svg.append('g')
+                .attr('transform', 'translate(525, 150)')
+                .attr('id', 'legend');
+
+            legend.selectAll('.colorbar')
+                .data(d3.range(9))
+                .enter().append('rect')
+                .attr('y', d => d * 20 + 'px')
+                .attr('height', '20px')
+                .attr('width', '20px')
+                .attr('x', '0px')
+                .attr("class", d => "q" + d + "-9");
+
+            const legendScale = d3.scaleLinear()
+                .domain([0, d3.max(dpts, e => +e.count)])
+                .range([0, 9 * 20]);
+
+            svg.append("g")
+                .attr('transform', 'translate(550, 150)')
+                .call(d3.axisRight(legendScale).ticks(6));
+        });
+
+        function updatePrestationAndChart(departmentId, departmentName) {
+            d3.json(`http://localhost:4000/?query={prestationsByDpt(departement:"${departmentId}"){description count}}`)
+                .then(data => {
+                    prestations = data.data.prestationsByDpt;
+
+                    updatePrestationDiv(prestations, departmentName, departmentId);
+                    drawChart(prestations);
+                })
+                .catch(error => {
+                    console.error("Erreur lors de la récupération des données :", error);
+                });
+        }
+
+        function updatePrestationDiv(prestations, departmentName, departmentId) {
+            d3.select("#prestations").html(`<h3>Prestations - ${departmentName} (${departmentId})</h3>`);
+
+            prestations.forEach(prestation => {
+                d3.select("#prestations").append("p").html(`${prestation.description} (Count: ${prestation.count})`);
+            });
+        }
+
+        function drawChart(prestations) {
+            d3.select("#chart").selectAll("*").remove();
+
+            const margin = { top: 20, right: 30, bottom: 40, left: 50 };
+            const width = 500 - margin.left - margin.right;
+            const height = 300 - margin.top - margin.bottom;
+
+            const svg = d3.select("#chart")
+                .append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const x = d3.scaleBand()
+                .domain(prestations.map(d => d.description))
+                .range([0, width])
+                .padding(0.1);
+
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(prestations, d => d.count)])
+                .nice()
+                .range([height, 0]);
+
+            svg.append("g")
+                .attr("class", "x-axis")
+                .attr("transform", `translate(0,${height})`)
+                .call(d3.axisBottom(x))
+                .selectAll("text")
+                .attr("transform", "rotate(-45)")
+                .style("text-anchor", "end");
+
+            svg.append("g")
+                .attr("class", "y-axis")
+                .call(d3.axisLeft(y));
+
+            svg.selectAll(".bar")
+                .data(prestations)
+                .enter()
+                .append("rect")
+                .attr("class", "bar")
+                .attr("x", d => x(d.description))
+                .attr("y", d => y(d.count))
+                .attr("width", x.bandwidth())
+                .attr("height", d => height - y(d.count))
+                .style("fill", "steelblue");
+        }
+
+        function highlightSelectedDepartment(departmentId) {
+            departments.selectAll("path")
+                .classed("selected", false);
+
+            d3.select(`#d${departmentId}`)
+                .classed("selected", true);
+        }
+        
+        // Fonction pour le bouton "Effacer"
+        d3.select("#clear-button").on("click", function () {
+            d3.select("#prestations").html(""); // Vide les prestations
+            d3.select("#chart").selectAll("*").remove(); // Vide le graphique
+        });
+
+        // CSS for selected department
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .selected {
+                stroke: red;
+                stroke-width: 2px;
+            }
+        `;
+        document.head.appendChild(style);
+
+    </script>
+</body>
+

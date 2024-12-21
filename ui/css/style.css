@@ -1,0 +1,130 @@
+.prestation{
+    float: left;
+    width: 600px;
+}
+
+.prestationDescription{
+    float: left;
+    width: 250px;
+}    
+
+.prestationCount{
+    float: left;
+}    
+
+.prestationSum{
+    float: right;
+    background-color: aqua;
+    text-align: right;
+}
+
+#content{
+    width: 650px;
+}
+
+.department {
+    cursor: pointer;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke: black;
+    stroke-width: .5px;
+}
+
+.department:hover {
+    stroke-width: 2px;
+}
+
+div.chart-tooltip {
+    position: absolute;
+    opacity:0.8;
+    z-index:1000;
+    text-align:left;
+    border-radius:4px;
+    -moz-border-radius:4px;
+    -webkit-border-radius:4px;
+    padding:8px;
+    color:#fff;
+    background-color:#000;
+    font: 12px sans-serif;
+    max-width: 300px;
+    height: 60px;
+}
+
+#svg {
+    display: block;
+    margin: auto;
+}
+
+.select-field {
+    margin-top: -3rem;
+    margin-bottom: 5rem;
+}
+
+#chart {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+}
+.bar {
+    fill: steelblue;
+    transition: fill 0.3s;
+}
+.bar:hover {
+    fill: orange;
+}
+.x-axis text {
+    font-size: 12px;
+}
+.y-axis text {
+    font-size: 12px;
+}
+
+
+#nav {
+  background-color: #2f7bf5;
+  padding: 1rem;
+}
+
+#ul {
+  list-style: none;
+  display: flex;
+  justify-content: space-around;
+  padding: 0;
+  margin: 0;
+}
+
+#li {
+  margin: 0;
+}
+
+li{
+  list-style-position:outside;
+  list-style:none;
+  margin:15px;
+  text-align:center;
+  background-color: #2f7bf5;
+  padding : 15px;
+}
+
+#a{
+  font-size:200%;
+}
+
+nav ul li a {
+  text-decoration: none;
+  color: white;
+  font-weight: bold;
+}
+
+nav ul li a:hover {
+  text-decoration: underline;
+}
+
+h1,h2,h3 {
+  text-align: center;
+}
+
+#index{
+  background-color:#4287f5;
+}
+
